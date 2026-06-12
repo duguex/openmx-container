@@ -1,0 +1,49 @@
+Bootstrap: localimage
+From: /tmp/ubuntu_base.sif
+
+%labels
+  Author   duguex
+  Software OpenMX 3.9
+  Description "Standalone OpenMX DFT container"
+
+%files
+  /home/duguex/developing/openmx3.9/source /opt/openmx3.9/source
+  /home/duguex/developing/openmx3.9/DFT_DATA19 /opt/openmx3.9/DFT_DATA19
+
+%post
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update
+  apt-get upgrade -y
+  apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    gfortran \
+    make \
+    wget \
+    openmpi-bin \
+    libopenmpi-dev \
+    libfftw3-dev \
+    libfftw3-bin \
+    libscalapack-openmpi-dev \
+    libopenblas-dev \
+    liblapack-dev
+
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+
+  cd /opt/openmx3.9/source
+  make clean 2>/dev/null || true
+  make -j$(nproc) openmx
+
+  mkdir -p /opt/openmx3.9/work
+  cp openmx /opt/openmx3.9/work/
+  chmod -R a+rX /opt/openmx3.9
+
+%environment
+  export PATH=/opt/openmx3.9/work:/opt/openmx3.9/source:$PATH
+  export OMP_NUM_THREADS=1
+  export OPENMX_DFT_DATA_PATH=/opt/openmx3.9/DFT_DATA19
+
+%runscript
+  exec /opt/openmx3.9/work/openmx "$@"
