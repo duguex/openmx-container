@@ -1,0 +1,13 @@
+Bootstrap: localimage
+From: /mnt/shared/openmx4.0_intel.sif
+
+%environment
+    export MKLROOT=/opt/intel/oneapi/mkl/2025.0
+    export OPENMX_DFT_DATA_PATH=/opt/openmx4.0/DFT_DATA19
+    export OMP_NUM_THREADS=1
+    export MPIROOT=/opt/intel/oneapi/mpi/2021.14
+    export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/2025.0/lib:/opt/intel/oneapi/2025.0/lib:/opt/intel/oneapi/compiler/2025.0/lib:$MPIROOT/lib:$MPIROOT/libfabric/lib
+    export PATH=/opt/openmx4.0/work:/opt/openmx4.0/source:$MPIROOT/bin:$PATH
+
+%runscript
+    exec /opt/openmx4.0/work/openmx "$@"

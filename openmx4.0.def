@@ -1,0 +1,10 @@
+Bootstrap: localimage
+From: /mnt/shared/openmx4.0.sif
+
+%environment
+    export OPENMX_DFT_DATA_PATH=/opt/openmx4.0/DFT_DATA19
+    export OMP_NUM_THREADS=1
+    export PATH=/opt/openmx4.0/work:/opt/openmx4.0/source:$PATH
+
+%runscript
+    exec /opt/openmx4.0/work/openmx "$@"
