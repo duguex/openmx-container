@@ -14,3 +14,6 @@ docs/
 video_lec/
 workshop/
 openmx4.0_manual/
+openmx.db
+openmx.db-shm
+openmx.db-wal

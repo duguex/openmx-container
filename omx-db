@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""
+omx-db — OpenMX 计算手册数据库查询工具 (含 RAG 语义检索)
+
+Usage:
+    omx-db search <query>             全文搜索 (FTS5)
+    omx-db rag <query>                语义搜索 (RAG, embedding)
+    omx-db keyword <keyword>          按索引关键词搜索
+    omx-db section <num>              查看指定章节
+    omx-db list                       列出所有章节
+    omx-db files [--type html|pdf]    列出索引文件
+    omx-db stats                      数据库统计信息
+"""
+
+import sqlite3, sys, os, textwrap
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'openmx.db')
+
+def get_db():
+    if not os.path.exists(DB_PATH):
+        print(f'Error: database not found at {DB_PATH}', file=sys.stderr)
+        sys.exit(1)
+    db = sqlite3.connect(DB_PATH)
+    db.row_factory = sqlite3.Row
+    return db
+
+def cmd_search(args):
+    query = ' '.join(args)
+    if not query:
+        print('Usage: omx-db search <query>')
+        return
+
+    db = get_db()
+    # Auto-quote phrases and use OR for individual words
+    fts_query = ' OR '.join(f'"{w}"' if ' ' in w else w for w in query.split())
+    
+    rows = db.execute('''
+        SELECT rowid, sec_num, title, rank,
+               snippet(sections_fts, 2, '\033[33m', '\033[0m', '...', 50) AS ctx
+        FROM sections_fts
+        WHERE sections_fts MATCH ?
+        ORDER BY rank
+        LIMIT 20
+    ''', (fts_query,)).fetchall()
+    
+    if not rows:
+        print(f'No results for: {query}')
+        return
+    
+    print(f'\033[32m🔍 {len(rows)} results for "{query}"\033[0m\n')
+    for r in rows:
+        sec = f'§{r["sec_num"]}' if r['sec_num'] else ''
+        print(f'  \033[36m{sec:>12s}\033[0m  \033[1m{r["title"]}\033[0m')
+        print(f'  {r["ctx"]}')
+        print()
+    db.close()
+
+def cmd_keyword(args):
+    keyword = ' '.join(args)
+    if not keyword:
+        print('Usage: omx-db keyword <keyword>')
+        return
+
+    db = get_db()
+    rows = db.execute('''
+        SELECT DISTINCT ie.keyword,
+               COALESCE(s.sec_num, '') AS sec_num,
+               COALESCE(s.title, '') AS title,
+               ie.file_path
+        FROM index_entries ie
+        LEFT JOIN sections s ON s.file_path = ie.file_path
+            AND (s.anchor = '' OR ie.anchor = '' OR s.anchor = ie.anchor)
+        WHERE ie.keyword LIKE ?
+        ORDER BY ie.keyword, s.sec_num
+        LIMIT 30
+    ''', (f'%{keyword}%',)).fetchall()
+
+    if not rows:
+        print(f'No index keywords matching "{keyword}". Trying full-text search...\n')
+        cmd_search(args)
+        return
+
+    print(f'\033[32m📖 {len(rows)} keyword results for "{keyword}"\033[0m\n')
+    cur_kw = None
+    for r in rows:
+        if r['keyword'] != cur_kw:
+            cur_kw = r['keyword']
+            print(f'  \033[1m{cur_kw}\033[0m')
+        ref = f'§{r["sec_num"]}' if r['sec_num'] else ''
+        print(f'    {ref:>12s}  → {r["file_path"]}')
+    print()
+    db.close()
+
+def cmd_section(args):
+    num = ' '.join(args)
+    if not num:
+        print('Usage: omx-db section <num>  (e.g. "16", "8.2", "46.4.3")')
+        return
+
+    db = get_db()
+    row = db.execute('''
+        SELECT s.sec_num, s.title, s.file_path, s.depth,
+               SUBSTR(sc.raw_text, 1, 2000) AS excerpt
+        FROM sections s
+        JOIN section_content sc ON sc.section_id = s.id
+        WHERE s.sec_num = ?
+    ''', (num,)).fetchone()
+
+    if not row:
+        # Try fuzzy match
+        rows = db.execute('''
+            SELECT sec_num, title FROM sections
+            WHERE sec_num LIKE ? OR title LIKE ?
+            LIMIT 5
+        ''', (f'{num}%', f'%{num}%')).fetchall()
+        if rows:
+            print(f'Did you mean?')
+            for r in rows:
+                print(f'  §{r["sec_num"]:>8s}  {r["title"]}')
+        else:
+            print(f'Section not found: {num}')
+        return
+
+    print(f'\033[36m§{row["sec_num"]}\033[0m  \033[1m{row["title"]}\033[0m')
+    print(f'  File: \033[33m{row["file_path"]}\033[0m')
+    print(f'  URL:  \033[33mopenmx4.0_manual/{row["file_path"]}\033[0m')
+    print(f'  Depth: {row["depth"]}')
+    print()
+    print('─' * 60)
+    # Show excerpt with nice wrapping
+    excerpt = row['excerpt'][:2000]
+    for line in textwrap.wrap(excerpt, width=78):
+        print(f'  {line}')
+    print('─' * 60)
+    print(f'  \033[2m(truncated, full content in openmx4.0_manual/{row["file_path"]})\033[0m')
+    db.close()
+
+def cmd_list(args):
+    db = get_db()
+    rows = db.execute('''
+        SELECT sec_num, title, depth FROM sections
+        WHERE depth <= 2
+        ORDER BY 
+            CAST(SUBSTR('00' || sec_num, 1, 2) AS INTEGER),
+            SUBSTR(sec_num, INSTR(sec_num, '.') + 1) * 1
+    ''').fetchall()
+    
+    print('\033[32m📑 Manual Contents\033[0m\n')
+    for r in rows:
+        indent = '  ' * (r['depth'] - 1) if r['sec_num'] else ''
+        sec = f'§{r["sec_num"]}' if r['sec_num'] else ''
+        print(f'  {indent}\033[36m{sec:>12s}\033[0m  {r["title"]}')
+    print()
+    db.close()
+
+def cmd_files(args):
+    file_type = None
+    if '--type' in args:
+        idx = args.index('--type')
+        file_type = args[idx + 1]
+        args = args[:idx] + args[idx+2:]
+    
+    db = get_db()
+    if file_type:
+        rows = db.execute('''
+            SELECT path, file_type, size_bytes, category FROM files
+            WHERE file_type = ?
+            ORDER BY category, path
+        ''', (file_type,)).fetchall()
+    else:
+        rows = db.execute('''
+            SELECT path, file_type, size_bytes, category FROM files
+            ORDER BY file_type, category, path
+        ''').fetchall()
+    
+    print(f'\033[32m📁 {len(rows)} files\033[0m\n')
+    for r in rows:
+        sz = f'{r["size_bytes"]/1024:.0f} KB' if r['size_bytes'] < 1024*1024 else f'{r["size_bytes"]/(1024*1024):.1f} MB'
+        print(f'  [{r["category"]:10s}] [{r["file_type"]:4s}] {r["path"]:50s} {sz:>8s}')
+    print()
+    db.close()
+
+def cmd_stats(args):
+    db = get_db()
+    print('\033[32m📊 Database Statistics\033[0m\n')
+    for table in ['sections', 'index_entries', 'section_content', 'files', 'sections_fts']:
+        cnt = db.execute(f'SELECT COUNT(*) AS cnt FROM {table}').fetchone()['cnt']
+        print(f'  {table:20s}  {cnt:>6d} rows')
+    
+    cats = db.execute('SELECT category, COUNT(*) AS cnt FROM files GROUP BY category ORDER BY category').fetchall()
+    pad = ' ' * 20
+    for c in cats:
+        print(f'  {pad}  {c["category"]:>10s}: {c["cnt"]} files')
+
+    types = db.execute('SELECT file_type, COUNT(*) AS cnt FROM files GROUP BY file_type').fetchall()
+    for t in types:
+        print(f'  {pad}  {t["file_type"]:>10s}: {t["cnt"]} files')
+    
+    # DB size
+    db_size = os.path.getsize(DB_PATH)
+    print(f'\n  DB file size: {db_size/(1024*1024):.1f} MB')
+    db.close()
+
+def cmd_rag(args):
+    """Semantic search (RAG) using embeddings"""
+    query = ' '.join(args)
+    if not query:
+        print('Usage: omx-db rag <query>')
+        return
+
+    # Load embedding model (first call loads model, ~10s)
+    print('\033[2mLoading embedding model...\033[0m', flush=True)
+    import subprocess, sys
+    env = os.environ.copy()
+    env['HF_HUB_OFFLINE'] = '1'
+    env['TRANSFORMERS_OFFLINE'] = '1'
+    # Use a subprocess to avoid importing TF in main process
+    script = '''
+import os, sys, sqlite3, json, numpy as np
+os.environ['HF_HUB_OFFLINE'] = '1'
+os.environ['TRANSFORMERS_OFFLINE'] = '1'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer('BAAI/bge-small-en-v1.5', device='cpu')
+q = sys.argv[1]
+q_emb = model.encode(q, normalize_embeddings=True)
+db = sqlite3.connect(sys.argv[2])
+db.row_factory = sqlite3.Row
+rows = db.execute('SELECT section_id, sec_num, title, file_path, embedding FROM section_embeddings').fetchall()
+results = []
+for r in rows:
+    emb = np.frombuffer(r['embedding'], dtype=np.float32)
+    sim = float(np.dot(q_emb, emb))
+    results.append((sim, r['sec_num'], r['title'], r['file_path']))
+results.sort(reverse=True)
+print(json.dumps([{'sim': s, 'sec_num': n, 'title': t, 'file': f} for s,n,t,f in results[:10]]))
+'''
+    try:
+        result = subprocess.run(
+            [sys.executable, '-c', script, query, DB_PATH],
+            capture_output=True, text=True, timeout=120, env=env
+        )
+        if result.returncode != 0:
+            print(f'Error: {result.stderr[:500]}')
+            return
+        import json
+        hits = json.loads(result.stdout.strip())
+    except subprocess.TimeoutExpired:
+        print('Error: embedding query timed out')
+        return
+    except json.JSONDecodeError as e:
+        print(f'Error parsing results: {e}')
+        return
+
+    if not hits:
+        print('No results.')
+        return
+
+    print(f'\033[32m🔍 Semantic search: "{query}"\033[0m\n')
+    for h in hits:
+        sec = f'§{h["sec_num"]}' if h['sec_num'] else ''
+        bar_len = int(h['sim'] * 30)
+        bar = '█' * bar_len + '░' * (30 - bar_len)
+        print(f'  \033[36m{sec:>12s}\033[0m  \033[1m{h["title"]}\033[0m')
+        print(f'  {bar}  {h["sim"]:.3f}')
+        print()
+    print('  \033[2m(query took ~9s first call, model loaded in subprocess)\033[0m')
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        return
+    
+    cmd = sys.argv[1]
+    args = sys.argv[2:]
+    cmds = {
+        'rag': cmd_rag,
+        'search': cmd_search,
+        'keyword': cmd_keyword,
+        'section': cmd_section,
+        'list': cmd_list,
+        'files': cmd_files,
+        'stats': cmd_stats,
+    }
+    
+    if cmd in cmds:
+        cmds[cmd](args)
+    else:
+        print(f'Unknown command: {cmd}')
+        print(__doc__)
+
+if __name__ == '__main__':
+    main()
