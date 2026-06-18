@@ -127,33 +127,25 @@ LIB = -lgfortran -L${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 \
       -liomp5 -lpthread -lm -ldl -lifcore \
       -Wl,--allow-multiple-definition
 ```
+## 容器状态
 
-## 最终容器状态
-
-| 容器 | 路径 | 大小 | 求解器状态 |
+| 容器 | 路径 | 大小 | 状态 |
 |---|---|---|---|
-| GNU | `/mnt/shared/openmx4.0.sif` | 452 MB | Cluster=NaN, **DC 可用** |
-| Intel | `/mnt/shared/openmx4.0_intel.sif` | 2.6 GB | Docker 正常, Singularity segfault |
-| Intel ref | `mirror.houlang.cloud/dh/dc1394/openmx4.0-ubuntu22.04:0.2` | — | Cluster 正确 (Docker), 仅作参考 |
+| Intel v4.0 | `/mnt/shared/openmx4.0_intel.sif` | 2.6 GB | ✅ Cluster/DC 求解器均正确, 补丁全 |
+
+基于 `dc1394/openmx4.0-ubuntu22.04:0.2` (IFX 2026 + MKL 2026), 打上了:
+- Official patch 4.0.1
+- Patch A: `OPENMX_DFT_DATA_PATH` 环境变量回退 (含空字符串修复)
+- Patch B: `Make_InputFile_with_FinalCoord.c` fopen NULL 检查
 
 ### 已知问题
 
-**GNU**: Cluster/Band 求解器返回 NaN (`scf.EigenvalueSolver Cluster` 或 `Band`)。必须用 `DC`。
-原因不明 — 去掉 `-DLEAK_DETECT` 和 `-ffast-math` 未能修复。`Cluster_DFT_Col.c` 在 v4.0 被大幅重写 (3011→4694 行), 可能是上游代码问题。
+**GNU 版**: Cluster/Band 求解器返回 NaN。已移除。
 
-**Intel**: 参考镜像 `dc1394/openmx4.0-ubuntu22.04:0.2` 用 IFX 2026.0 + MKL 2026.0 编译, Cluster 求解器正确, 但在 Singularity 中 segfault (Docker 正常)。原因可能是 Intel MPI/MKL 与 Singularity 兼容性问题。
-
-**Patch A**: `env_path = getenv("OPENMX_DFT_DATA_PATH")` 在 env var 为空字符串时误判,
-需加 `env_path[0] != '\0'` 判断 (已修复在源代码中, 但已编译的二进制可能未包含此修复)。
-
-**只读目录 segfault**: Patch B 已防止, 但建议在可写目录运行。
-# GNU: Docker → export → sandbox → SIF
-docker run -d --name openmx40_gnu_build ubuntu:22.04 sleep infinity
-docker exec openmx40_gnu_build bash -c 'apt-get install -y build-essential ...'
-docker cp /tmp/openmx4.0_build/openmx4.0/. openmx40_gnu_build:/opt/openmx4.0/
-docker exec openmx40_gnu_build bash -c 'cd /opt/openmx4.0/source && make all'
-docker commit openmx40_gnu_build openmx40_gnu
-docker export openmx40_gnu_build -o /tmp/openmx40_gnu_fs.tar
+**Intel 版使用注意事项**:
+- **必须在可写目录运行** (SIF 内文件系统只读, 写 `met.out` 会 segfault)
+- **不需要** `DATA.PATH` 在输入文件 → env var 自动发现
+- **必须用容器内的 `mpirun`** (宿主 MPI 与 Intel MPI 不兼容)
 mkdir sandbox && tar xf /tmp/openmx40_gnu_fs.tar -C sandbox/
 singularity build --fakeroot /mnt/shared/openmx4.0.sif sandbox/
 singularity build --fakeroot /mnt/shared/openmx4.0.sif openmx4.0.def
