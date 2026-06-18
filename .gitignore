@@ -1,0 +1,16 @@
+*.o
+*.mod
+*.out
+met.*
+met_rst/
+Si8.*
+Si8_rst/
+*.tar.gz
+*.zip
+*.pdf
+*.pyc
+__pycache__/
+docs/
+video_lec/
+workshop/
+openmx4.0_manual/
