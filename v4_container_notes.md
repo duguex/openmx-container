@@ -130,29 +130,25 @@ LIB = -lgfortran -L${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 \
 
 ## 待排查: Cluster/Band 求解器返回零本征值
 
-**已知事实** (截至 2026-06-18):
-- [x] Cluster/Band (`solve_evp_real` ELPA1 路径) 返回 Uele=0, DC 求解器正常
-- [x] `solve_evp_real.f90`, `elpa1.f90` 与 v3.9 完全一致 (md5 相同)
-- [x] `Cluster_DFT_Col.c` 中调用 `solve_evp_real` 的参数 v3.9 和 v4.0 相同
-- [x] Hamilton 矩阵 `Hs` 是正确的 (DC 能算出正确能量, 用的是同一个 Hs)
-- [x] 我们的补丁 (Patch A/B, official 4.0.1) 未触及任何求解器代码
-- [x] v3.9 没有此问题 (同样的 gcc/gfortran 11.4, 同样的 mpif90)
-- [x] 论坛有人用 Docker 镜像 `dc1394/openmx4.0-ubuntu22.04:0.2` 跑出正确结果
-- [x] `-DLEAK_DETECT` 是官方 makefile 默认就有的 (s4.3)
-- [x] `-ffast-math` 非官方默认 (官方用 `-xHOST -O3`, 没有 `-ffast-math`)
-- [ ] 去掉 `-DLEAK_DETECT` 重编 → 验证是否修复
-- [ ] 去掉 `-ffast-math` 重编 → 验证是否修复
-- [ ] 去掉两者 → 验证是否修复
+**症状**: `scf.EigenvalueSolver Cluster` 或 `Band` 时 `Uele=0`, Utot 错误 (Methane +4.84)。DC 正常。
 
-**参考**: OpenMX 论坛 https://www.openmx-square.org/forum/patio.cgi?mode=view&no=3522
+**根因 (已定位)**: IFX 2025.0 无法编译 ELPA 2018 (keyword arguments 语法不兼容), 改用 gfortran 编译 Fortran 代码。gfortran + Intel C (`mpiicx`) 混编导致 ELPA 求解器 ABI 不兼容, 返回零本征值。
 
-**Patch A 已知缺陷**:
-- `env_path = getenv("OPENMX_DFT_DATA_PATH")` 在 `OPENMX_DFT_DATA_PATH=""` 时返回非 NULL
-- 空字符串覆盖了输入文件 `DATA.PATH` 设置
-- 修复: `if (env_path && env_path[0] != '\0') { ... }`
+**证据**:
+- `dc1394/openmx4.0-ubuntu22.04:0.2` 用 `mpiifx` (IFX) + MKL 2026.0 + 原始 ELPA 2018 (无任何补丁), Cluster 求解器结果正确
+- 参考镜像 makefile: `CC = mpiicx ...`, `FC = mpiifx ...`, **无 `-DLEAK_DETECT`**, 静态链接 MKL `.a`
+- 我们的 Intel 版: `FC = mpif90` (gfortran), 混编导致数值错误
 
-**已修复的其他问题**:
-- 只读目录 segfault (Patch B)
+**修复方向** (需 MKL 2026.0):
+- Intel 版改用 IFX 编译 Fortran (`mpiifx`)
+- MKL 从 2025.0 升级到 2026.0
+- 去掉 `-DLEAK_DETECT` (参考镜像 `#undef LEAK_DETECT`)
+- 去掉 gfortran 回退
+- 不需要 ELPA keyword arguments 补丁 (IFX 2026 兼容)
+
+**参考**:
+- Docker 镜像: `mirror.houlang.cloud/dh/dc1394/openmx4.0-ubuntu22.04:0.2` (或 `dc1394/openmx4.0-ubuntu22.04:0.2`)
+- 论坛: https://www.openmx-square.org/forum/patio.cgi?mode=view&no=3522
 
 
 ## 构建步骤摘要
