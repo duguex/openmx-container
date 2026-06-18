@@ -128,32 +128,25 @@ LIB = -lgfortran -L${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 \
       -Wl,--allow-multiple-definition
 ```
 
-## 待排查: Cluster/Band 求解器返回零本征值
+## 最终容器状态
 
-**症状**: `scf.EigenvalueSolver Cluster` 或 `Band` 时 `Uele=0`, Utot 错误 (Methane +4.84)。DC 正常。
+| 容器 | 路径 | 大小 | 求解器状态 |
+|---|---|---|---|
+| GNU | `/mnt/shared/openmx4.0.sif` | 452 MB | Cluster=NaN, **DC 可用** |
+| Intel | `/mnt/shared/openmx4.0_intel.sif` | 2.6 GB | Docker 正常, Singularity segfault |
+| Intel ref | `mirror.houlang.cloud/dh/dc1394/openmx4.0-ubuntu22.04:0.2` | — | Cluster 正确 (Docker), 仅作参考 |
 
-**根因 (已定位)**: IFX 2025.0 无法编译 ELPA 2018 (keyword arguments 语法不兼容), 改用 gfortran 编译 Fortran 代码。gfortran + Intel C (`mpiicx`) 混编导致 ELPA 求解器 ABI 不兼容, 返回零本征值。
+### 已知问题
 
-**证据**:
-- `dc1394/openmx4.0-ubuntu22.04:0.2` 用 `mpiifx` (IFX) + MKL 2026.0 + 原始 ELPA 2018 (无任何补丁), Cluster 求解器结果正确
-- 参考镜像 makefile: `CC = mpiicx ...`, `FC = mpiifx ...`, **无 `-DLEAK_DETECT`**, 静态链接 MKL `.a`
-- 我们的 Intel 版: `FC = mpif90` (gfortran), 混编导致数值错误
+**GNU**: Cluster/Band 求解器返回 NaN (`scf.EigenvalueSolver Cluster` 或 `Band`)。必须用 `DC`。
+原因不明 — 去掉 `-DLEAK_DETECT` 和 `-ffast-math` 未能修复。`Cluster_DFT_Col.c` 在 v4.0 被大幅重写 (3011→4694 行), 可能是上游代码问题。
 
-**修复方向** (需 MKL 2026.0):
-- Intel 版改用 IFX 编译 Fortran (`mpiifx`)
-- MKL 从 2025.0 升级到 2026.0
-- 去掉 `-DLEAK_DETECT` (参考镜像 `#undef LEAK_DETECT`)
-- 去掉 gfortran 回退
-- 不需要 ELPA keyword arguments 补丁 (IFX 2026 兼容)
+**Intel**: 参考镜像 `dc1394/openmx4.0-ubuntu22.04:0.2` 用 IFX 2026.0 + MKL 2026.0 编译, Cluster 求解器正确, 但在 Singularity 中 segfault (Docker 正常)。原因可能是 Intel MPI/MKL 与 Singularity 兼容性问题。
 
-**参考**:
-- Docker 镜像: `mirror.houlang.cloud/dh/dc1394/openmx4.0-ubuntu22.04:0.2` (或 `dc1394/openmx4.0-ubuntu22.04:0.2`)
-- 论坛: https://www.openmx-square.org/forum/patio.cgi?mode=view&no=3522
+**Patch A**: `env_path = getenv("OPENMX_DFT_DATA_PATH")` 在 env var 为空字符串时误判,
+需加 `env_path[0] != '\0'` 判断 (已修复在源代码中, 但已编译的二进制可能未包含此修复)。
 
-
-## 构建步骤摘要
-
-```bash
+**只读目录 segfault**: Patch B 已防止, 但建议在可写目录运行。
 # GNU: Docker → export → sandbox → SIF
 docker run -d --name openmx40_gnu_build ubuntu:22.04 sleep infinity
 docker exec openmx40_gnu_build bash -c 'apt-get install -y build-essential ...'
