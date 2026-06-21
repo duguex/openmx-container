@@ -38,7 +38,8 @@ def to_ase_key(openmx_key, schema):
 
 
 def generate_input(structure_path, template_name, overrides, schema,
-                   templates, kspacing, dry_run, verbose, output_path):
+                   templates, kspacing, dry_run, verbose, output_path,
+                   json_output=False):
     from ase.io import read
     from ase.calculators.openmx import OpenMX
 
@@ -47,17 +48,15 @@ def generate_input(structure_path, template_name, overrides, schema,
     try:
         atoms = read(structure_path)
     except Exception as e:
-        print(f"Error reading structure file '{structure_path}': {e}", file=sys.stderr)
-        sys.exit(1)
+        die_json(f"reading structure file '{structure_path}': {e}", json_output=json_output)
 
     if verbose:
         print(f"  Atoms: {len(atoms)}, formula: {atoms.get_chemical_formula()}",
               file=sys.stderr)
 
     if template_name not in templates:
-        print(f"Error: unknown template '{template_name}'. "
-              f"Available: {', '.join(sorted(templates.keys()))}", file=sys.stderr)
-        sys.exit(1)
+        die_json(f"unknown template '{template_name}'. "
+                 f"Available: {', '.join(sorted(templates.keys()))}", json_output=json_output)
 
     template = templates[template_name]
     params = dict(template["keywords"])
@@ -105,17 +104,14 @@ def generate_input(structure_path, template_name, overrides, schema,
                 if verbose:
                     print(f"  Using bundled DFT_DATA19: {bundled}", file=sys.stderr)
             else:
-                print("Error: DATA.PATH not set and no DFT_DATA19 found in openmx4.0/.",
-                      file=sys.stderr)
-                print("  Set OPENMX_DFT_DATA_PATH to your DFT_DATA19 directory.",
-                      file=sys.stderr)
-                sys.exit(1)
+                die_json("DATA.PATH not set and no DFT_DATA19 found in openmx4.0/. "
+                         "Set OPENMX_DFT_DATA_PATH to your DFT_DATA19 directory.",
+                         json_output=json_output)
 
     data_path = params["data_path"]
     vps_dir = os.path.join(data_path, "VPS")
     if not os.path.isdir(vps_dir):
-        print(f"Error: VPS directory not found at {vps_dir}", file=sys.stderr)
-        sys.exit(1)
+        die_json(f"VPS directory not found at {vps_dir}", json_output=json_output)
 
     # Generate output stem
     if output_path:
@@ -161,6 +157,32 @@ def generate_input(structure_path, template_name, overrides, schema,
     return params
 
 
+def lookup_templates_json(templates):
+    """Return templates as JSON-serializable list of dicts."""
+    return [
+        {"name": name, "description": t.get("description"),
+         "auto_kpoints": t.get("auto_kpoints"),
+         "requires_prior_scf": t.get("requires_prior_scf"),
+         "keywords": t["keywords"]}
+        for name, t in sorted(templates.items())
+    ]
+
+
+def lookup_keywords_json(schema):
+    """Return keyword schema as JSON-serializable list, sorted by name."""
+    return [{"name": k, **v} for k, v in sorted(schema.items())]
+
+
+def die_json(msg, json_output=False, code=1):
+    """Print JSON error and exit, or print text error and exit with code."""
+    if json_output:
+        print(json.dumps({"error": msg, "exit": code}))
+        sys.exit(0)
+    else:
+        print(f"Error: {msg}", file=sys.stderr)
+        sys.exit(code)
+
+
 
 def cli():
     parser = argparse.ArgumentParser(
@@ -176,6 +198,8 @@ def cli():
                         help="List available templates")
     parser.add_argument("--list-keywords", action="store_true",
                         help="List all known keywords with type info")
+    parser.add_argument("--type",
+                        help="Filter by type (string, integer, float, bool, tuple_integer, tuple_float, matrix)")
     parser.add_argument("--keyword", metavar="KEY",
                         help="Show structured metadata for a single keyword")
     parser.add_argument("-k", "--kpoints", type=int, nargs=3,
@@ -195,66 +219,79 @@ def cli():
                         help="Print to stdout instead of writing file")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="Show keyword resolution")
+    parser.add_argument("-j", "--json", action="store_true",
+                        help="JSON output (machine-readable)")
 
     args = parser.parse_args()
     schema = load_json(SCHEMA_PATH, "keywords.json")
     templates = load_json(TEMPLATES_PATH, "templates.json")
 
     if args.list_templates:
-        print("Available templates:")
-        for name, t in sorted(templates.items()):
-            auto = " [auto-kpoints]" if t.get("auto_kpoints") else ""
-            prior = " [requires prior SCF]" if t.get("requires_prior_scf") else ""
-            desc = t.get("description", "")
-            print(f"  {name}{auto}{prior}")
-            if desc:
-                print(f"        {desc}")
-            for key, val in t["keywords"].items():
-                val_str = json.dumps(val) if val is not None else "auto"
-                print(f"          {key} = {val_str}")
+        if args.json:
+            print(json.dumps(lookup_templates_json(templates), indent=2, ensure_ascii=False))
+        else:
+            print("Available templates:")
+            for name, t in sorted(templates.items()):
+                auto = " [auto-kpoints]" if t.get("auto_kpoints") else ""
+                prior = " [requires prior SCF]" if t.get("requires_prior_scf") else ""
+                desc = t.get("description", "")
+                print(f"  {name}{auto}{prior}")
+                if desc:
+                    print(f"        {desc}")
+                for key, val in t["keywords"].items():
+                    val_str = json.dumps(val) if val is not None else "auto"
+                    print(f"          {key} = {val_str}")
         return
 
     if args.list_keywords:
-        print("Known keywords:")
-        for kw, entry in sorted(schema.items()):
-            if entry["type"]:
-                print(f"  {kw}  [{entry['type']}]", end="")
-                if entry.get("default"):
-                    print(f"  default={entry['default']}", end="")
-                if entry.get("unit"):
-                    print(f"  ({entry['unit']})", end="")
-                print()
-            else:
-                print(f"  {kw}  [untyped — manual section keyword]")
+        if args.json:
+            kw_list = lookup_keywords_json(schema)
+            if args.type:
+                kw_list = [e for e in kw_list if e.get("type") == args.type]
+            print(json.dumps(kw_list, indent=2, ensure_ascii=False))
+        else:
+            print("Known keywords:")
+            for kw, entry in sorted(schema.items()):
+                if entry["type"]:
+                    print(f"  {kw}  [{entry['type']}]", end="")
+                    if entry.get("default"):
+                        print(f"  default={entry['default']}", end="")
+                    if entry.get("unit"):
+                        print(f"  ({entry['unit']})", end="")
+                    print()
+                else:
+                    print(f"  {kw}  [untyped — manual section keyword]")
         return
 
     if args.keyword:
         kw = args.keyword
         if kw not in schema:
+            if args.json:
+                print(json.dumps({"error": f"Keyword '{kw}' not found in schema"}))
+                sys.exit(1)
             print(f"Keyword '{kw}' not found in schema.", file=sys.stderr)
             sys.exit(1)
-        entry = schema[kw]
-        print(f"{kw}:")
-        print(f"  type:        {entry.get('type', 'null')}")
-        print(f"  ase_key:     {entry.get('ase_key', 'null')}")
-        print(f"  default:     {json.dumps(entry.get('default'))}")
-        print(f"  valid:       {json.dumps(entry.get('valid_values'))}")
-        print(f"  unit:        {json.dumps(entry.get('unit'))}")
-        print(f"  section:     {entry.get('section', 'null')}")
-        print(f"  source:      {entry.get('source', 'null')}")
-        if entry.get("description"):
-            print(f"  description: {entry['description']}")
+        if args.json:
+            print(json.dumps(schema[kw], indent=2, ensure_ascii=False))
+        else:
+            entry = schema[kw]
+            print(f"{kw}:")
+            print(f"  type:        {entry.get('type', 'null')}")
+            print(f"  ase_key:     {entry.get('ase_key', 'null')}")
+            print(f"  default:     {json.dumps(entry.get('default'))}")
+            print(f"  valid:       {json.dumps(entry.get('valid_values'))}")
+            print(f"  unit:        {json.dumps(entry.get('unit'))}")
+            print(f"  section:     {entry.get('section', 'null')}")
+            print(f"  source:      {entry.get('source', 'null')}")
+            if entry.get("description"):
+                print(f"  description: {entry['description']}")
         return
 
     if not args.structure:
-        print("Error: STRUCTURE file is required. Use --help for usage.",
-              file=sys.stderr)
-        sys.exit(1)
+        die_json("STRUCTURE file is required. Use --help for usage.", json_output=args.json)
 
     if not os.path.isfile(args.structure):
-        print(f"Error: structure file '{args.structure}' not found.",
-              file=sys.stderr)
-        sys.exit(1)
+        die_json(f"structure file '{args.structure}' not found", json_output=args.json)
 
     overrides = {}
     for arg in args.set:
@@ -289,6 +326,7 @@ def cli():
         dry_run=args.dry_run,
         verbose=args.verbose,
         output_path=args.output,
+        json_output=args.json,
     )
 
 
