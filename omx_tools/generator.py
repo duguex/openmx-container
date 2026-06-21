@@ -102,8 +102,15 @@ def generate_input(structure_path, template_name, overrides, schema,
             if verbose:
                 print(f"  Using OPENMX_DFT_DATA_PATH: {env_path}", file=sys.stderr)
         else:
-            die_json("DATA.PATH not set. Set OPENMX_DFT_DATA_PATH to your DFT_DATA19 "
-                     "directory (e.g. /mnt/shared/DFT_DATA19).", json_output=json_output)
+            # Fallback: bundled DFT_DATA19 in the workspace directory
+            bundled = PKG_DIR.parent / "openmx4.0" / "DFT_DATA19"
+            if bundled.is_dir():
+                params["data_path"] = str(bundled.resolve())
+                if verbose:
+                    print(f"  Using bundled DFT_DATA19: {bundled}", file=sys.stderr)
+            else:
+                die_json("DATA.PATH not set. Set OPENMX_DFT_DATA_PATH to your DFT_DATA19 "
+                         "directory (e.g. /mnt/shared/DFT_DATA19).", json_output=json_output)
 
     data_path = params["data_path"]
     vps_dir = os.path.join(data_path, "VPS")
