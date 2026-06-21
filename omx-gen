@@ -50,6 +50,15 @@ def auto_kgrid(atoms, kspacing):
     return kgrid
 
 
+def strip_current_directory(dat_path):
+    """Remove System.CurrentDirectory — OpenMX defaults to CWD."""
+    with open(dat_path) as f:
+        lines = f.readlines()
+    kept = [l for l in lines if not l.strip().startswith("System.CurrentDirectory")]
+    if len(kept) != len(lines):
+        with open(dat_path, "w") as f:
+            f.writelines(kept)
+
 def to_ase_key(openmx_key, schema):
     """Convert OpenMX dot-style key to ASE snake_case key."""
     if openmx_key in schema:
@@ -170,7 +179,6 @@ def generate_input(structure_path, template_name, overrides, schema,
 
     # 7. Write input via ASE calculator
     if dry_run:
-        # Print to stdout instead (writing to temp then reading back)
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             calc = OpenMX(label=os.path.join(tmpdir, stem),
@@ -178,7 +186,13 @@ def generate_input(structure_path, template_name, overrides, schema,
             calc.write_input(atoms)
             dat_path = os.path.join(tmpdir, f"{stem}.dat")
             with open(dat_path) as f:
-                sys.stdout.write(f.read())
+                content = f.read()
+        # Strip absolute System.CurrentDirectory
+        content = "\n".join(
+            l for l in content.split("\n")
+            if not l.strip().startswith("System.CurrentDirectory")
+        )
+        sys.stdout.write(content)
         if verbose:
             print("(dry-run: printed to stdout)", file=sys.stderr)
     else:
@@ -186,10 +200,10 @@ def generate_input(structure_path, template_name, overrides, schema,
         calc = OpenMX(label=os.path.join(os.getcwd(), stem),
                       command="", **params)
         calc.write_input(atoms)
-        # ASE writes to {label}.dat; move if output_path differs
         written = f"{stem}.dat"
         if os.path.abspath(written) != os.path.abspath(out_path):
             os.rename(written, out_path) if os.path.exists(written) else None
+        strip_current_directory(out_path)
         if verbose:
             print(f"Written: {out_path}", file=sys.stderr)
 
