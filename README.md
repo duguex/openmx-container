@@ -159,3 +159,69 @@ singularity exec /mnt/shared/openmx4.0_intel.sif \
 | 源码 | 根目录 | 2 tar.gz + 1 zip | OpenMX 4.0, ADPACK 2.2, Viewer |
 
 完整清单见 `RESOURCES.md`。
+
+---
+
+## 输入文件生成 (`omx-gen`)
+
+从结构文件（CIF/XYZ/POSCAR）自动生成 OpenMX `.dat` 输入文件：
+
+```bash
+# SCF 计算（晶体）
+omx-gen Si.cif -t scf_band -o Si.dat
+
+# 金属体系（Kerker 混合，高 smearing）
+omx-gen POSCAR -t scf_band_metal --cutoff 400 -k 8 8 8
+
+# 分子/团簇（无 k 点）
+omx-gen h2o.xyz -t scf_cluster
+
+# 几何优化
+omx-gen structure.cif -t geom_opt -o opt.dat
+
+# 查看模板与关键词
+omx-gen --list-templates
+omx-gen --keyword scf.EigenvalueSolver
+```
+
+### 完整 pipeline：生成 → 提交 → 计算
+
+```bash
+# 1. 生成输入文件
+omx-gen Si.cif -t scf_band -k 2 2 2 -o Si.dat
+
+# 2. 通过 crisp 提交到集群
+crisp submit                     # 自动检测计算器类型
+crisp submit --calculator openmx # 或指定计算器
+
+# 3. 查看作业状态
+crisp jobs
+crisp logs -n <task_name> -f     # 实时日志
+
+# 结果自动拉回本地 output/ 目录
+```
+
+### 模板预设
+
+| 模板 | 适用场景 | 自动 k 点 |
+|------|----------|-----------|
+| `scf_band` | 晶体 SCF，能带对角化 | ✅ |
+| `scf_band_metal` | 金属体系（Kerker，高 smearing） | ✅ |
+| `scf_cluster` | 分子/团簇（无 k 点） | ❌ |
+| `geom_opt` | 几何优化 | ✅ |
+| `band_dispersion` | 后 SCF 能带计算 | ❌ |
+
+### 关键词知识库
+
+`schemas/keywords.json` 包含 304 条结构化关键词信息：
+
+- 93 条来自 ASE 的类型标注（integer/float/string/bool/tuple/matrix）
+- 38 条来自 v3.9 手册的默认值
+- 71 条来自 v4.0 §8.2 的描述文本
+- 174 条骨架条目（专业章节，待补充）
+
+```bash
+# 通过 omx-db 查询结构化关键词
+omx-db keyword --json scf.Kgrid
+omx-db keyword --json scf.EigenvalueSolver
+```
