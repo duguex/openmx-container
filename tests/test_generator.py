@@ -150,9 +150,10 @@ class TestKeyword:
         out, err, code = run_gen(
             ["omx-gen", "--keyword", "scf.NonexistentKeyword", "--json"], capsys
         )
-        assert code == 1
+        assert code == 0  # die_json exits 0 for JSON mode
         data = json.loads(out)
         assert "error" in data
+        assert data["exit"] == 1  # intended exit code embedded in JSON
         assert "NonexistentKeyword" in data["error"]
 
     def test_text_existing(self, capsys):

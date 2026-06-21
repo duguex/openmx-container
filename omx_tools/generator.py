@@ -271,11 +271,7 @@ def cli():
     if args.keyword:
         kw = args.keyword
         if kw not in schema:
-            if args.json:
-                print(json.dumps({"error": f"Keyword '{kw}' not found in schema"}))
-                sys.exit(1)
-            print(f"Keyword '{kw}' not found in schema.", file=sys.stderr)
-            sys.exit(1)
+            die_json(f"Keyword '{kw}' not found in schema", json_output=args.json)
         if args.json:
             print(json.dumps(schema[kw], indent=2, ensure_ascii=False))
         else:
