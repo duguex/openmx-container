@@ -19,63 +19,65 @@ python3 omx-db keyword "关键词"
 
 ## 1. 用户手册
 
-| 文件 | 大小 | 来源 |
-|---|---|---|
-| `openmx3.9_manual.pdf` | 17 MB | https://openmx-square.org/openmx_man3.9/openmx3.9.pdf |
-| `docs/New_Features_OpenMX3.9.pdf` | 2.0 MB | 同上页面 |
-| `docs/Viewer_Manual.pdf` | 13 MB | https://www.openmx-square.org/viewer/10th_Manual_OpenMX_Viewer.pdf |
+| 文件 | 来源 |
+|---|---|
+| openmx3.9_manual.pdf (17 MB) | https://openmx-square.org/openmx_man3.9/openmx3.9.pdf |
+| New_Features_OpenMX3.9.pdf (2.0 MB) | 同上页面 |
+| Viewer_Manual.pdf (13 MB) | https://www.openmx-square.org/viewer/10th_Manual_OpenMX_Viewer.pdf |
 
 HTML 版手册: https://openmx-square.org/openmx_man3.9/
 v4.0 手册: https://openmx-square.org/openmx_man4.0/
 
 ## 2. 安装指南
 
-| 文件 | 大小 | 来源 |
-|---|---|---|
-| `docs/OpenMX-Compile.pdf` | 655 KB | https://www.openmx-square.org/tech_notes/OpenMX-Compile.pdf |
+| 文件 | 来源 |
+|---|---|
+| OpenMX-Compile.pdf (655 KB) | https://www.openmx-square.org/tech_notes/OpenMX-Compile.pdf |
 
 ## 3. 技术笔记
 
-| 文件 | 大小 | 来源 |
-|---|---|---|
-| `docs/TechNotes_TotalEnergy.pdf` | 132 KB | https://www.openmx-square.org/tech_notes/tech1-1_3/tech1-1_3.pdf |
-| `docs/Recursion_Methods.pdf` | 1.3 MB | https://www.openmx-square.org/recursion.pdf |
+| 文件 | 来源 |
+|---|---|
+| TechNotes_TotalEnergy.pdf (132 KB) | https://www.openmx-square.org/tech_notes/tech1-1_3/tech1-1_3.pdf |
+| Recursion_Methods.pdf (1.3 MB) | https://www.openmx-square.org/recursion.pdf |
 
 ## 4. ADPACK 文档
 
-| 文件 | 大小 |
+| 文件 | 来源 |
 |---|---|
-| `docs/ADPACK_Manual.pdf` | 250 KB |
-| `adpack2.2_source.tar.gz` | 352 KB |
+| ADPACK_Manual.pdf (250 KB) | 随源码分发 |
+| adpack2.2_source.tar.gz (352 KB) | 随 OpenMX 源码包 |
 
 ## 5. Workshop 教程 (2020 Hands-on)
 
-| 文件 | 大小 | 内容 |
-|---|---|---|
-| `workshop/OpenMX-General.pdf` | 3.2 MB | 通用教程 |
-| `workshop/OpenMX-1.pdf` | 2.6 MB | 实操 Part 1 |
-| `workshop/OpenMX-2.pdf` | 2.2 MB | 实操 Part 2 |
-| `workshop/OpenMX-Geo.pdf` | 1.6 MB | 几何优化 |
-| `workshop/OpenMX-XPS.pdf` | 536 KB | XPS 芯能级 |
-| `workshop/OpenMX-NEGF.pdf` | 1.4 MB | NEGF 输运 |
+| 文件 | 内容 |
+|---|---|
+| OpenMX-General.pdf (3.2 MB) | 通用教程 |
+| OpenMX-1.pdf (2.6 MB) | 实操 Part 1 |
+| OpenMX-2.pdf (2.2 MB) | 实操 Part 2 |
+| OpenMX-Geo.pdf (1.6 MB) | 几何优化 |
+| OpenMX-XPS.pdf (536 KB) | XPS 芯能级 |
+| OpenMX-NEGF.pdf (1.4 MB) | NEGF 输运 |
+
+来源: https://www.openmx-square.org/workshop.html
 
 ## 6. 视频讲座 PDF (含 YouTube 链接)
 
-| 文件 | 大小 | YouTube |
-|---|---|---|
-| `video_lec/OpenMX-Hands-on-2014Oct10.pdf` | 3.2 MB | https://youtu.be/-V0FcsT8mDI (Part 1-5) |
-| `video_lec/OpenMX-Compile-2014Oct10.pdf` | 1.3 MB | https://youtu.be/w6B3rIJH4kc |
-| `video_lec/OrderN-Part1.pdf` | 3.4 MB | https://youtu.be/yAix4FtocE8 |
-| `video_lec/OrderN-Part2.pdf` | 3.7 MB | https://youtu.be/utBwqp8OPB0 |
-| `video_lec/OpenMX-2015-Oct-15.pdf` | 2.2 MB | https://youtu.be/A901Iwj4Aw8 |
-| `video_lec/OpenMX-2015-Oct-22.pdf` | 1.8 MB | https://youtu.be/8fiCLoGU_30 |
+| 文件 | YouTube |
+|---|---|
+| OpenMX-Hands-on-2014Oct10.pdf (3.2 MB) | https://youtu.be/-V0FcsT8mDI (Part 1-5) |
+| OpenMX-Compile-2014Oct10.pdf (1.3 MB) | https://youtu.be/w6B3rIJH4kc |
+| OrderN-Part1.pdf (3.4 MB) | https://youtu.be/yAix4FtocE8 |
+| OrderN-Part2.pdf (3.7 MB) | https://youtu.be/utBwqp8OPB0 |
+| OpenMX-2015-Oct-15.pdf (2.2 MB) | https://youtu.be/A901Iwj4Aw8 |
+| OpenMX-2015-Oct-22.pdf (1.8 MB) | https://youtu.be/8fiCLoGU_30 |
 
 ## 7. 补丁
 
-| 文件 | 大小 | 说明 |
-|---|---|---|
-| `patch3.9.9.tar.gz` | 1.1 MB | OpenMX 3.9 → 3.9.9 补丁 (2021-10-17) |
-| `patch4.0.1.tar.gz` | 31 KB | OpenMX 4.0 → 4.0.1 补丁 (2026-05-08) |
+| 文件 | 说明 |
+|---|---|
+| patch3.9.9.tar.gz (1.1 MB) | OpenMX 3.9 → 3.9.9 补丁 (2021-10-17) |
+| patch4.0.1.tar.gz (31 KB) | OpenMX 4.0 → 4.0.1 补丁 (2026-05-08) |
 
 ## 8. 源码 (后台下载中, 限时 1h)
 
