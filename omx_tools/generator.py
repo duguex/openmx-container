@@ -40,8 +40,12 @@ def to_ase_key(openmx_key, schema):
 def generate_input(structure_path, template_name, overrides, schema,
                    templates, kspacing, dry_run, verbose, output_path,
                    json_output=False):
-    from ase.io import read
-    from ase.calculators.openmx import OpenMX
+    try:
+        from ase.io import read
+        from ase.calculators.openmx import OpenMX
+    except ImportError:
+        die_json("omx-gen requires ASE. Install with: pip install 'omx-tools[gen]'",
+                 json_output=json_output)
 
     if verbose:
         print(f"Reading structure: {structure_path}", file=sys.stderr)

@@ -7,9 +7,10 @@ name = "omx-tools"
 version = "0.1.0"
 description = "OpenMX input generator and manual database tools"
 requires-python = ">=3.10"
-dependencies = [
-    "ase>=3.22",
-]
+dependencies = []
+
+[project.optional-dependencies]
+gen = ["ase>=3.22"]
 
 [project.scripts]
 omx-gen = "omx_tools.generator:cli"
