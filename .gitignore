@@ -17,3 +17,5 @@ openmx4.0_manual/
 openmx.db
 openmx.db-shm
 openmx.db-wal
+openmx4.0/
+parsed/

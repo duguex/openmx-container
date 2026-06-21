@@ -56,10 +56,34 @@ def cmd_search(args):
     db.close()
 
 def cmd_keyword(args):
+    use_json = '--json' in args
+    if use_json:
+        args = [a for a in args if a != '--json']
     keyword = ' '.join(args)
     if not keyword:
         print('Usage: omx-db keyword <keyword>')
+        print('       omx-db keyword --json <keyword>')
         return
+
+    if use_json:
+        schema_path = os.path.join(os.path.dirname(__file__), 'schemas', 'keywords.json')
+        if os.path.exists(schema_path):
+            import json
+            with open(schema_path) as f:
+                schema = json.load(f)
+            # Try exact match first, then substring
+            if keyword in schema:
+                print(json.dumps(schema[keyword], indent=2, ensure_ascii=False))
+                return
+            # Substring fallback
+            matches = {k: v for k, v in schema.items() if keyword.lower() in k.lower()}
+            if matches:
+                print(json.dumps(matches, indent=2, ensure_ascii=False))
+                return
+            print(f'Keyword "{keyword}" not found in schema. Falling back to DB search...\n')
+        else:
+            print(f'Schema file not found at {schema_path}. Falling back to DB search...\n')
+        # Fall through to DB search
 
     db = get_db()
     rows = db.execute('''
