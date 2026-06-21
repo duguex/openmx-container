@@ -22,3 +22,6 @@ parsed/
 omx_tools.egg-info/
 work/
 dist/
+omx-tools-workspace/
+omx-tools.skill
+safe/

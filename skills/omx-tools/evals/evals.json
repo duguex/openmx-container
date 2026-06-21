@@ -1,0 +1,33 @@
+{
+  "skill_name": "omx-tools",
+  "evals": [
+    {
+      "id": 1,
+      "name": "section-search",
+      "prompt": "I need to understand how SCF convergence works in OpenMX. Can you find the relevant section in the manual and show me what it says about mixing methods and convergence criteria?",
+      "expected_output": "Uses omx-db to search for SCF convergence, reads relevant sections, presents the key information about mixing methods (Simple, GR-Pulay, RMM-DIIS, Kerker, RMM-DIISK, etc.) and convergence criteria.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "keyword-detail",
+      "prompt": "What does the keyword 'scf.Mixing.Type' do in OpenMX? What values can it take and which one is recommended for metallic systems?",
+      "expected_output": "Uses omx-db keyword or omx-gen --keyword to look up scf.Mixing.Type, reports its type, valid values, and description from the schema.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "generate-input",
+      "prompt": "I have a structure file at work/Si8.cif and I need to run an SCF calculation on it with OpenMX. Can you generate the input file using the scf_band template with a 4x4x4 k-point grid?",
+      "expected_output": "Uses omx-gen to generate a .dat input file from the CIF structure using the scf_band template with k-points 4 4 4. Produces valid OpenMX input content.",
+      "files": ["work/Si8.cif"]
+    },
+    {
+      "id": 4,
+      "name": "semantic-search",
+      "prompt": "I'm having trouble converging SCF for a metallic system. What mixing method and parameters should I use?",
+      "expected_output": "Uses omx-db search and/or omx-db rag to find relevant sections about SCF convergence for metals. Recommends RMM-DIISK with appropriate parameters (Kerker factor, mixing history, temperature).",
+      "files": []
+    }
+  ]
+}
