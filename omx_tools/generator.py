@@ -139,8 +139,9 @@ def generate_input(structure_path, template_name, overrides, schema,
                       command="", **params)
         calc.write_input(atoms)
         written = f"{stem}.dat"
-        if os.path.abspath(written) != os.path.abspath(out_path):
-            os.rename(written, out_path) if os.path.exists(written) else None
+        if os.path.abspath(written) != os.path.abspath(out_path) and os.path.exists(written):
+            import shutil
+            shutil.move(written, out_path)
         # Strip System.CurrentDirectory
         with open(out_path) as f:
             lines = f.readlines()

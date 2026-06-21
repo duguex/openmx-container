@@ -1,0 +1,39 @@
+System.CurrentDirectory        /home/duguex/openmx_container/Si8_test
+System.Name        Si8_test
+DATA.PATH        /mnt/shared/DFT_DATA19
+Species.Number        1
+<Definition.of.Atomic.Species
+    Si  Si8.0-s2p2d1  Si_PBE19
+Definition.of.Atomic.Species>
+
+Atoms.Number        8
+Atoms.SpeciesAndCoordinates.Unit        Ang
+<Atoms.SpeciesAndCoordinates
+    1  Si  0.0  0.0  0.0  2.0  2.0
+    2  Si  3.8167000000000004  2.2035727724160448  1.5581612502134257  2.0  2.0
+    3  Si  5.72505  3.305359158624067  0.0  2.0  2.0
+    4  Si  9.54175  5.508931931040111  1.5581612502134257  2.0  2.0
+    5  Si  5.72505  1.1017863862080224  3.1163225004268513  2.0  2.0
+    6  Si  9.54175  3.305359158624067  4.674483750640277  2.0  2.0
+    7  Si  3.816700000000001  4.4071455448320895  3.1163225004268513  2.0  2.0
+    8  Si  7.633400000000001  6.610718317248134  4.674483750640277  2.0  2.0
+Atoms.SpeciesAndCoordinates>
+
+Atoms.UnitVectors.Unit        Ang
+<Atoms.UnitVectors
+    7.6334  0.0  0.0
+    3.816700000000001  6.610718317248134  0.0
+    3.816700000000001  2.2035727724160448  6.232645000853703
+Atoms.UnitVectors>
+
+scf.Kgrid        3 3 3
+scf.maxIter        2
+scf.Mixing.History        20
+scf.ElectronicTemperature        300
+scf.energycutoff        300
+scf.criterion        1e-06
+scf.XcType        GGA-PBE
+scf.EigenvalueSolver        Band
+scf.Mixing.Type        Rmm-Diis
+MD.maxIter        1
+MD.Type        Nomd
