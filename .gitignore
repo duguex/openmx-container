@@ -20,3 +20,5 @@ openmx.db-wal
 openmx4.0/
 parsed/
 omx_tools.egg-info/
+work/
+dist/
