@@ -10,8 +10,8 @@ import textwrap
 from pathlib import Path
 
 PKG_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = PKG_DIR.parent
-DB_PATH = PROJECT_ROOT / "openmx.db"
+_default_db = Path(os.environ.get("OPENMX_DB_PATH", str(PKG_DIR.parent / "openmx.db")))
+DB_PATH = _default_db.resolve()
 
 
 def strip_ansi(text):
@@ -22,6 +22,7 @@ def strip_ansi(text):
 def get_db():
     if not os.path.exists(DB_PATH):
         print(f"Error: database not found at {DB_PATH}", file=sys.stderr)
+        print("  Set OPENMX_DB_PATH to the correct openmx.db path.", file=sys.stderr)
         sys.exit(1)
     db = sqlite3.connect(str(DB_PATH))
     db.row_factory = sqlite3.Row
