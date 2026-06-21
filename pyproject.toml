@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omx-tools"
+version = "0.1.0"
+description = "OpenMX input generator and manual database tools"
+requires-python = ">=3.10"
+dependencies = [
+    "ase>=3.22",
+]
+
+[project.scripts]
+omx-gen = "omx_tools.generator:cli"
+omx-db = "omx_tools.database:cli"
+
+[tool.setuptools.packages.find]
+include = ["omx_tools*"]
+
+[tool.setuptools.package-data]
+omx_tools = ["schemas/*.json"]
