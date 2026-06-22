@@ -14,6 +14,15 @@ description: |
 
 # omx-tools — OpenMX input generation and manual database
 
+## 项目位置
+
+- **仓库/项目目录:** `~/openmx_container/`
+- **源 SKILL.md:** `~/openmx_container/skills/omx-tools/SKILL.md`
+- **注册到 Hermes 的方式:** 软链接 `~/.hermes/skills/research/omx-tools/SKILL.md → ~/openmx_container/skills/omx-tools/SKILL.md`（项目文件更新后自动同步）
+- **CLI 工具代码:** `~/openmx_container/omx_tools/`
+- **SQLite 数据库:** `~/openmx_container/openmx.db`
+- **HPC 作业提交:** 通过 `crisp` skill 提交生成的 `.dat` 文件到集群。crisp 负责 auto-detect → sbatch → running → fetch。详见 `skill_view(name='crisp')`。
+
 This skill provides two CLI tools that output **JSON** when called with `--json`.
 Always prefer `--json` for machine-readable output.  Error responses always
 have the shape `{"error": "<message>", "exit": <code>}` and exit code 0 (so the
@@ -154,7 +163,38 @@ JSON output:
 }
 ```
 
-### 1.7 Semantic / RAG search
+### 1.7 Hybrid search (FTS5 + semantic → RRF)
+
+```
+omx-db hybrid <query> [--json] [--debug]
+```
+
+Combines FTS5 keyword search and semantic embedding search via Reciprocal Rank
+Fusion (RRF).  Results show a `source` field: `"fts5"`, `"semantic"`, or
+`"hybrid"` (both signals contributed).
+
+Use `--debug` to trace the FTS5 scores, semantic similarities, and RRF fusion
+weights.
+
+JSON output:
+
+```json
+{
+  "results": [
+    {
+      "sec_num": "16.1",
+      "title": "SCF convergence basics",
+      "score": 0.0325,
+      "source": "hybrid"
+    }
+  ],
+  "count": 20,
+  "query": "scf convergence",
+  "_debug": ["FTS5: 12 hits", "Semantic: 10 hits", "..."]
+}
+```
+
+### 1.8 Semantic / RAG search
 
 ```
 omx-db rag <query> [--json]
@@ -178,15 +218,19 @@ JSON output:
 ]
 ```
 
-### 1.8 Error shapes (all subcommands)
+### 1.9 Error shapes (omx-db)
+
+All error responses include a `"suggestion"` field with an actionable next step
+for the agent.
 
 ```
 # Missing required argument
-{"error": "No query provided"}
-{"error": "No section number provided"}
+{"error": "No query provided", "suggestion": "Pass a search term like 'omx-db search scf convergence'."}
+{"error": "No section number provided", "suggestion": "Pass a section number like 'omx-db section 16'."}
 
 # Not found
-{"error": "Section not found: 99.99", "suggestions": [...]}
+{"error": "Section not found: 99.99", "suggestion": "Use 'omx-db list' to browse all sections.", "suggestions": [...]}
+{"error": "Keyword 'foo' not found", "suggestion": "Try 'omx-db list' to see available sections, then browse for keywords manually."}
 ```
 
 ## 2. `omx-gen` — Input file generation
@@ -209,15 +253,6 @@ JSON output (list of template objects):
     "name": "scf_band",
     "description": "SCF single-point with band structure (default for crystalline solids)",
     "auto_kpoints": true,
-    "requires_prior_scf": false,
-    "keywords": {
-      "scf_eigenvaluesolver": "Band",
-      "scf_xctype": "GGA-PBE",
-      "kpts": null,
-      …
-    }
-  }
-]
 ```
 
 Available templates: `scf_band`, `scf_band_metal`, `scf_cluster`,
