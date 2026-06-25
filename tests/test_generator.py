@@ -8,13 +8,12 @@ import pytest
 
 from omx_tools.generator import (
     cli,
-    die_json,
     lookup_templates_json,
     lookup_keywords_json,
-    load_json,
     SCHEMA_PATH,
     TEMPLATES_PATH,
 )
+from omx_tools._utils import load_json, die_json
 
 
 # ── helpers ──────────────────────────────────────────────────────────

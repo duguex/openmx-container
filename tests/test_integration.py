@@ -57,8 +57,9 @@ class TestContainerRun:
 
     def _generate_dat(self):
         """Generate .dat in tmp_path via omx-gen Python API."""
-        from omx_tools.generator import generate_input, load_json
+        from omx_tools.generator import generate_input
         from omx_tools.generator import SCHEMA_PATH, TEMPLATES_PATH
+        from omx_tools._utils import load_json
 
         schema = load_json(SCHEMA_PATH, "keywords.json")
         templates = load_json(TEMPLATES_PATH, "templates.json")
