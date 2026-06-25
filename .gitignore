@@ -25,3 +25,14 @@ dist/
 omx-tools-workspace/
 omx-tools.skill
 safe/
+test_real.*
+*.DFTSCF
+*.EV
+*.MC
+*.UCell
+*.crd
+*.dpm
+*.ene
+*.md
+*.md2
+*_rst/
