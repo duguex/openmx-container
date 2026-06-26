@@ -21,6 +21,9 @@ def forward(params: dict, mapping: dict, verbose: bool = False) -> dict:
             if convert == "passthrough":
                 overrides[omx_key] = vasp_val
 
+            elif convert == "encut":
+                overrides[omx_key] = float(vasp_val) * 2.0
+
             elif convert == "nsw":
                 v = int(vasp_val)
                 overrides[omx_key] = max(v, 1)
@@ -111,7 +114,9 @@ def _apply_reverse(value, convert_rule, verbose: bool = False):
         elif convert_rule == "nelect_rev":
             return float(value)
 
-        # passthrough (no reverse_convert or unknown rule)
+        elif convert_rule == "encut_rev":
+            return float(value) / 2.0
+
         return value
 
     except (ValueError, TypeError, AttributeError) as exc:

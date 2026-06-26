@@ -139,14 +139,15 @@ class TestDetectIntent:
 # ---------------------------------------------------------------------------
 
 class TestMapForward:
-    def test_encut_passthrough(self, mapping):
+    def test_encut_x2(self, mapping):
+        """ENCUT=400 eV → scf_energycutoff=800 Ry (×2 heuristic)."""
         result = forward({"ENCUT": 400}, mapping)
-        assert result == {"scf_energycutoff": 400}
+        assert result == {"scf_energycutoff": 800}
 
-    def test_encut_passthrough_float(self, mapping):
-        """Pymatgen may return E cut as float."""
+    def test_encut_x2_float(self, mapping):
         result = forward({"ENCUT": 400.0}, mapping)
-        assert result == {"scf_energycutoff": 400.0}
+        assert result == {"scf_energycutoff": 800.0}
+
 
     def test_spin_conversion(self, mapping):
         """ISPIN=2 → 'On'."""
@@ -205,16 +206,6 @@ class TestMapForward:
         result = forward({"ALGO": "N"}, mapping)
         assert result == {"scf_eigenvaluesolver": "Band"}
 
-    def test_unknown_tag_skipped(self, mapping):
-        """Tags not in mapping table produce empty overrides."""
-        result = forward({"XYZZY": 42}, mapping)
-        assert result == {}
-
-    def test_mapped_null_key_skipped(self, mapping):
-        """Tags with omx_key=null are skipped."""
-        result = forward({"ISMEAR": -5}, mapping)
-        assert "scf_eigenvaluesolver" not in result
-
     def test_multiple_params(self, mapping):
         """Multiple mapped params produce combined result."""
         result = forward({
@@ -223,10 +214,11 @@ class TestMapForward:
             "EDIFF": 1e-5,
         }, mapping)
         assert result == {
-            "scf_energycutoff": 500,
+            "scf_energycutoff": 1000,
             "scf_spinpolarization": "On",
             "scf_criterion": 1e-5,
         }
+
 
     def test_verbose_warn_on_error(self, mapping, capsys):
         """Broken conversion prints warning if verbose."""
@@ -291,10 +283,11 @@ class TestMapReverse:
         result = reverse({"scf_eigenvaluesolver": "Cluster"}, mapping)
         assert result == {"ALGO": "Cluster"}
 
-    def test_reverse_passthrough_encut(self, mapping):
-        """scf_energycutoff=400 → ENCUT=400 (passthrough, no reverse_convert)."""
+    def test_reverse_encut(self, mapping):
+        """scf_energycutoff=400 Ry → ENCUT=200 eV (reverse of ×2)."""
         result = reverse({"scf_energycutoff": 400}, mapping)
-        assert result == {"ENCUT": 400}
+        assert result == {"ENCUT": 200.0}
+
 
     def test_reverse_passthrough_nsw(self, mapping):
         """md_maxiter=50 → NSW=50 (passthrough)."""

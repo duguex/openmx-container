@@ -24,16 +24,10 @@ def to_ase_key(openmx_key: str, schema: dict) -> str:
 
 
 def _add_shorthand_units(params: dict) -> None:
-    """Add ASE shorthand parameter keys for unit conversion.
+    """Add ASE shorthand keys for unit conversion (eV→Ha, eV/Å→Ha/Bohr).
 
-    ASE's ``parameter_overwrites()`` only converts units (eV→Ha etc.)
-    when the shorthand counterpart key exists alongside the standard key.
-
-    NOTE: ``scf_energycutoff`` is NOT converted eV→Ry.  OpenMX uses
-    atomic-orbital basis sets (PAO) where the FFT grid cutoff is
-    inherently larger (300-500 Ry) than VASP's plane-wave ENCUT
-    (400-520 eV).  Dividing ENCUT by 13.6 would under-shoot the
-    resolution needed for PAO integrals.
+    ``scf_energycutoff`` is NOT handled here — it uses a heuristic ×2
+    mapping in ``mapping.forward()`` (ENCUT eV → OpenMX Ry).
     """
     from ase.units import Bohr, Ha
 
@@ -154,7 +148,7 @@ def write_dat(
     if not os.path.isdir(vps_dir):
         die_json(f"VPS directory not found at {vps_dir}", json_output=json_output)
 
-    # ── ASE shorthand keys for unit conversion ──────────────────────────
+    # ASE shorthand keys for unit conversion
     _add_shorthand_units(params)
 
     # Generate output stem
@@ -182,7 +176,6 @@ def write_dat(
     else:
         out_path = output_path or f"{stem}.dat"
         calc = OpenMX(label=os.path.join(os.getcwd(), stem), command="", **params)
-
         calc.write_input(atoms)
         written = f"{stem}.dat"
         if (
@@ -190,9 +183,7 @@ def write_dat(
             and os.path.exists(written)
         ):
             import shutil
-
             shutil.move(written, out_path)
-        # Strip System.CurrentDirectory
         with open(out_path) as f:
             lines = f.readlines()
         kept = [

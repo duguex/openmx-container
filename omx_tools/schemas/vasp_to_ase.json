@@ -1,5 +1,5 @@
 {
-  "ENCUT": {"omx_key": "scf_energycutoff", "convert": "passthrough"},
+  "ENCUT": {"omx_key": "scf_energycutoff", "convert": "encut", "reverse_convert": "encut_rev"},
   "NELECT": {"omx_key": "scf_system_charge", "convert": "nelect", "reverse_convert": "nelect_rev",
     "note": "auto-detected from NELECT+POTCAR; use --charge FLOAT to override"},
   "ISMEAR": {"omx_key": null, "convert": null, "note": "used for intent detection only"},
