@@ -60,14 +60,13 @@ def forward(params: dict, mapping: dict, verbose: bool = False) -> dict:
                 overrides[omx_key] = abs(float(vasp_val))
 
             elif convert == "algo":
-                s = str(vasp_val).upper()
-                if s in ("N", "NORMAL"):
+                s = str(vasp_val).upper().rstrip(".")
+                if s in ("N", "NORMAL", "F", "FAST", "V", "VERYFAST", "D", "DAMPED"):
                     overrides[omx_key] = "Band"
-                elif s == "FAST":
+                elif s in ("A", "ALL"):
                     overrides[omx_key] = "Band"
                 else:
                     overrides[omx_key] = vasp_val
-
             elif convert == "nelect":
                 overrides[omx_key] = float(vasp_val)
 
