@@ -22,7 +22,7 @@ def forward(params: dict, mapping: dict, verbose: bool = False) -> dict:
                 overrides[omx_key] = vasp_val
 
             elif convert == "encut":
-                overrides[omx_key] = float(vasp_val) * 2.0
+                overrides[omx_key] = float(vasp_val) / 2.0
 
             elif convert == "nsw":
                 v = int(vasp_val)
@@ -115,7 +115,7 @@ def _apply_reverse(value, convert_rule, verbose: bool = False):
             return float(value)
 
         elif convert_rule == "encut_rev":
-            return float(value) / 2.0
+            return float(value) * 2.0
 
         return value
 

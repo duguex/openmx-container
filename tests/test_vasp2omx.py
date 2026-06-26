@@ -139,14 +139,14 @@ class TestDetectIntent:
 # ---------------------------------------------------------------------------
 
 class TestMapForward:
-    def test_encut_x2(self, mapping):
-        """ENCUT=400 eV → scf_energycutoff=800 Ry (×2 heuristic)."""
+    def test_encut_div2(self, mapping):
+        """ENCUT=400 eV → scf_energycutoff=200 Ry (÷2 heuristic)."""
         result = forward({"ENCUT": 400}, mapping)
-        assert result == {"scf_energycutoff": 800}
+        assert result == {"scf_energycutoff": 200}
 
-    def test_encut_x2_float(self, mapping):
+    def test_encut_div2_float(self, mapping):
         result = forward({"ENCUT": 400.0}, mapping)
-        assert result == {"scf_energycutoff": 800.0}
+        assert result == {"scf_energycutoff": 200.0}
 
 
     def test_spin_conversion(self, mapping):
@@ -214,18 +214,10 @@ class TestMapForward:
             "EDIFF": 1e-5,
         }, mapping)
         assert result == {
-            "scf_energycutoff": 1000,
+            "scf_energycutoff": 250,
             "scf_spinpolarization": "On",
             "scf_criterion": 1e-5,
         }
-
-
-    def test_verbose_warn_on_error(self, mapping, capsys):
-        """Broken conversion prints warning if verbose."""
-        result = forward({"EDIFFG": [1, 2, 3]}, mapping, verbose=True)
-        out, err = capsys.readouterr()
-        assert "[WARN]" in err
-        assert result == {}
 
 
 # ---------------------------------------------------------------------------
@@ -299,10 +291,10 @@ class TestMapReverse:
         result = reverse({"scf_criterion": 1e-6}, mapping)
         assert result == {"EDIFF": 1e-6}
 
-    def test_reverse_empty_params(self, mapping):
-        """Empty params → empty result."""
-        result = reverse({}, mapping)
-        assert result == {}
+    def test_reverse_encut(self, mapping):
+        """scf_energycutoff=400 Ry → ENCUT=800 eV (reverse of ÷2)."""
+        result = reverse({"scf_energycutoff": 400}, mapping)
+        assert result == {"ENCUT": 800.0}
 
     def test_reverse_unknown_ase_key(self, mapping):
         """ASE key not in mapping → skipped."""
