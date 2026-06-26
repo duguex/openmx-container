@@ -4,17 +4,7 @@ import sys
 
 
 def forward(params: dict, mapping: dict, verbose: bool = False) -> dict:
-    """Map VASP INCAR parameters to ASE/OpenMX override keys.
-
-    *params* is the typed dict from ``parsers.vasp.parse_incar()``.
-    *mapping* is the ``vasp_to_ase.json`` structure.
-
-    Returns a dict of ASE key → converted value suitable for passing
-    as *overrides* to ``writers.openmx.write_dat()``.
-
-    Conversion failures are silently skipped unless *verbose* is True,
-    in which case a ``[WARN]`` is printed to stderr.
-    """
+    """Map VASP INCAR parameters to ASE/OpenMX override keys."""
     overrides: dict = {}
 
     for vasp_key, vasp_val in params.items():
@@ -30,6 +20,13 @@ def forward(params: dict, mapping: dict, verbose: bool = False) -> dict:
         try:
             if convert == "passthrough":
                 overrides[omx_key] = vasp_val
+
+            elif convert == "nsw":
+                v = int(vasp_val)
+                overrides[omx_key] = max(v, 1)
+                if verbose and v == 0:
+                    print(f"[INFO] NSW={v} → md_maxiter=1 (OpenMX requires ≥1)",
+                          file=sys.stderr)
 
             elif convert == "bool":
                 overrides[omx_key] = bool(vasp_val)
@@ -67,6 +64,7 @@ def forward(params: dict, mapping: dict, verbose: bool = False) -> dict:
                     overrides[omx_key] = "Band"
                 else:
                     overrides[omx_key] = vasp_val
+
             elif convert == "nelect":
                 overrides[omx_key] = float(vasp_val)
 
@@ -124,17 +122,7 @@ def _apply_reverse(value, convert_rule, verbose: bool = False):
 
 
 def reverse(params: dict, mapping: dict, verbose: bool = False) -> dict:
-    """Map ASE/OpenMX override keys back to VASP INCAR tags.
-
-    *params* is an ASE-keyed dict (e.g. from ``parsers.openmx.parse_dat()``).
-    *mapping* is the ``vasp_to_ase.json`` structure.
-
-    Returns a dict of VASP tag → value suitable for writing an INCAR file.
-
-    Entries with *omx_key* set to null are skipped.
-    Entries with no *reverse_convert* field passthrough the value as-is
-    (symmetric mapping).
-    """
+    """Map ASE/OpenMX override keys back to VASP INCAR tags."""
     vasp_result: dict = {}
 
     for vasp_key, entry in mapping.items():
