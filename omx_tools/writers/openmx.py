@@ -23,6 +23,26 @@ def to_ase_key(openmx_key: str, schema: dict) -> str:
     return "_".join(parts).lower()
 
 
+def _add_shorthand_units(params: dict) -> None:
+    """Add ASE shorthand parameter keys for unit conversion.
+
+    ASE's ``parameter_overwrites()`` only converts units (eV→Ha etc.)
+    when the shorthand counterpart key exists alongside the standard key.
+
+    NOTE: ``scf_energycutoff`` is NOT converted eV→Ry.  OpenMX uses
+    atomic-orbital basis sets (PAO) where the FFT grid cutoff is
+    inherently larger (300-500 Ry) than VASP's plane-wave ENCUT
+    (400-520 eV).  Dividing ENCUT by 13.6 would under-shoot the
+    resolution needed for PAO integrals.
+    """
+    from ase.units import Bohr, Ha
+
+    if "scf_criterion" in params and "convergence" not in params:
+        params["convergence"] = params["scf_criterion"]
+    if "md_opt_criterion" in params:
+        params["md_opt_criterion"] = params["md_opt_criterion"] / (Ha / Bohr)
+
+
 def write_dat(
     intent: CalculationIntent,
     *,
@@ -34,32 +54,7 @@ def write_dat(
     schema_path: str | Path | None = None,
     templates_path: str | Path | None = None,
 ) -> dict:
-    """Generate an OpenMX .dat input file from a *CalculationIntent*.
-
-    Parameters
-    ----------
-    intent : CalculationIntent
-        The calculation intent (template, params/overrides, structure_path).
-    kspacing : float
-        k-point spacing in 1/Å (default 0.33).
-    dry_run : bool
-        Print .dat to stdout instead of writing a file.
-    verbose : bool
-        Show detailed resolution steps on stderr.
-    output_path : str or None
-        Output .dat path (default: *structure_path*.stem + ``.dat``).
-    json_output : bool
-        Emit errors as JSON to stdout (exit 0).
-    schema_path : str or None
-        Override path to keywords.json.
-    templates_path : str or None
-        Override path to templates.json.
-
-    Returns
-    -------
-    dict
-        The final resolved parameter dict (useful for testing/reporting).
-    """
+    """Generate an OpenMX .dat input file from a *CalculationIntent*."""
     try:
         from ase.io import read
         from ase.calculators.openmx import OpenMX
@@ -96,7 +91,7 @@ def write_dat(
         )
 
     template = templates[intent.template]
-    params = dict(template["keywords"])
+    params: dict = dict(template["keywords"])
 
     if verbose:
         print(
@@ -158,6 +153,9 @@ def write_dat(
     vps_dir = os.path.join(data_path, "VPS")
     if not os.path.isdir(vps_dir):
         die_json(f"VPS directory not found at {vps_dir}", json_output=json_output)
+
+    # ── ASE shorthand keys for unit conversion ──────────────────────────
+    _add_shorthand_units(params)
 
     # Generate output stem
     if output_path:
